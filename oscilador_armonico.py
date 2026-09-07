@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from schrodinger_1d_tfg import (
+from schrodinger1d import (
     harmonic_energy,
     harmonic_wavefunction,
     solve_bound_states,
