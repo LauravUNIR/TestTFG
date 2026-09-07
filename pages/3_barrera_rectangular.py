@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from schrodinger_1d_tfg import (
+from schrodinger1d import (
     rectangular_barrier_transmission_exact,
     solve_left_incident_scattering,
 )
