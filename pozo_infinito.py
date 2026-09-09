@@ -25,7 +25,7 @@ st.write(
 )
 
 st.info(
-    # Se utilizan unidades adimensionales con ℏ = m = 1
+    "Se utilizan unidades adimensionales con ℏ = m = 1"
 )
 
 with st.sidebar:
