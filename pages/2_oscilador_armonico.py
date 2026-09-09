@@ -29,10 +29,7 @@ st.set_page_config(
 st.title("Oscilador armónico cuántico")
 
 st.write(
-    """
-    Resolución numérica de los estados ligados del oscilador
-    armónico mediante diferencias finitas.
-    """
+    # Resolución numérica de los estados ligados del oscilador armónico
 )
 
 st.info("Se utilizan unidades adimensionales con ℏ = m = 1.")
@@ -100,7 +97,7 @@ if not calculate:
     )
 
     st.warning(
-        "Selecciona los parámetros y pulsa «Calcular»."
+        "Selecciona los parámetros y pulsa Calcular"
     )
 
     st.stop()
@@ -327,7 +324,7 @@ with st.expander("Método numérico"):
         finito [-xₘₐₓ, xₘₐₓ], imponiendo condiciones de
         Dirichlet en sus extremos. La derivada segunda se
         aproxima con diferencias finitas centradas de segundo
-        orden.
+        orden
         """
     )
 
