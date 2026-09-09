@@ -1,4 +1,4 @@
-"""Resolucion numerica de la ecuacion de Schrodinger estacionaria en 1D.
+"""Resolucion numerica de la ecuacion de Schrodinger independiente del tiempo en 1D.
 
 Este script implementa los tres casos planteados en el TFG:
 
@@ -9,11 +9,8 @@ Este script implementa los tres casos planteados en el TFG:
 3. Validacion frente a soluciones analiticas, convergencia con la malla,
    ortonormalidad y conservacion de corriente R + T = 1.
 
-Los ejemplos usan unidades adimensionales con hbar = m = 1. Las funciones
-numericas aceptan otros valores consistentes de hbar y m.
+Los ejemplos usan unidades adimensionales con hbar = m = 1. 
 
-Dependencias: numpy, scipy y matplotlib.
-Ejecucion:    python schrodinger_1d_tfg.py
 """
 
 from __future__ import annotations
@@ -26,6 +23,7 @@ from typing import Callable
 
 import matplotlib
 
+# Generacion de imagenes sin abrir una ventana grafica
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -36,12 +34,13 @@ from scipy.special import eval_hermite, factorial
 
 
 Array = NDArray[np.float64]
+# el potencial puede aceptar un punto o una malla y devolver un escalar o un array
 Potential = Callable[[Array | float], Array | float]
 
 
 @dataclass(frozen=True)
 class BoundStateSolution:
-    """Resultado de un problema de estados ligados con Dirichlet."""
+    
 
     x: Array
     potential: Array
@@ -53,7 +52,7 @@ class BoundStateSolution:
 
 @dataclass(frozen=True)
 class ScatteringResult:
-    """Amplitudes y coeficientes para incidencia desde la izquierda."""
+    # Amplitudes y coeficientes para incidencia desde la izquierda.
 
     energy: float
     reflection_amplitude: complex
@@ -65,13 +64,13 @@ class ScatteringResult:
 
 
 def _evaluate_potential(potential: Potential, x: Array) -> Array:
-    """Evalua un potencial vectorizado o escalar sobre una malla."""
+    # potencial sobre una malla
 
     values = np.asarray(potential(x), dtype=float)
     if values.ndim == 0:
         values = np.full_like(x, float(values))
     if values.shape != x.shape:
-        raise ValueError("El potencial debe devolver un escalar o un array como x.")
+        raise ValueError("El potencial debe devolver o un escalar o un array.")
     if not np.all(np.isfinite(values)):
         raise ValueError("El potencial contiene valores no finitos en el dominio.")
     return values
@@ -87,33 +86,35 @@ def solve_bound_states(
     mass: float = 1.0,
     hbar: float = 1.0,
 ) -> BoundStateSolution:
-    """Resuelve H psi = E psi con psi(x_min)=psi(x_max)=0.
+    # Resuelve H psi = E psi con psi(x_min)=psi(x_max)=0.
 
-    La derivada segunda se aproxima por
+   '''
+    La derivada segunda la aproximamos mediante
 
         psi''(x_i) = (psi_{i+1} - 2 psi_i + psi_{i-1}) / dx**2
                      + O(dx**2).
 
-    El Hamiltoniano discreto es real, simetrico y tridiagonal. Solo se calculan
-    los ``n_states`` autovalores mas bajos.
-    """
+    Solo se calculan los ``n_states`` autovalores mas bajos.'''
 
     if x_max <= x_min:
-        raise ValueError("Debe cumplirse x_max > x_min.")
+        raise ValueError("Debe cumplirse x_max > x_min")
     if mass <= 0.0 or hbar <= 0.0:
-        raise ValueError("mass y hbar deben ser positivos.")
+        raise ValueError("La masa y la constante de Planck deben ser positivas")
     if n_points < n_states + 3 or n_states < 1:
-        raise ValueError("La malla es demasiado pequena para n_states.")
+        raise ValueError("La malla es demasiado pequeña para n_states")
 
+   # malla con los dos extremos con condiciones de Dirichlet
     x = np.linspace(x_min, x_max, n_points, dtype=float)
     dx = float(x[1] - x[0])
     v_full = _evaluate_potential(potential, x)
     v_interior = v_full[1:-1]
 
+   # Diagonales del hamiltoniano
     kinetic_scale = hbar**2 / (2.0 * mass * dx**2)
     diagonal = 2.0 * kinetic_scale + v_interior
     off_diagonal = np.full(n_points - 3, -kinetic_scale)
 
+   # solicitud de n_states de autovalores inferiores
     energies, eigenvectors = eigh_tridiagonal(
         diagonal,
         off_diagonal,
@@ -128,14 +129,15 @@ def solve_bound_states(
     for n, psi in enumerate(wavefunctions):
         norm = np.sqrt(simpson(np.abs(psi) ** 2, x=x))
         if norm == 0.0:
-            raise RuntimeError("Se obtuvo una autofuncion de norma nula.")
+            raise RuntimeError("Autofuncion de normalización nula")
         wavefunctions[n] = psi / norm
 
-        # Fija una convencion de signo reproducible; psi y -psi son el mismo estado.
+        # Convencion de signo para psi y -psi
         largest_component = int(np.argmax(np.abs(wavefunctions[n])))
         if wavefunctions[n, largest_component] < 0.0:
             wavefunctions[n] *= -1.0
 
+    # Comprobación de la precisión del problema matricial  
     residuals = np.empty(n_states, dtype=float)
     for n, (energy, psi) in enumerate(zip(energies, wavefunctions, strict=True)):
         psi_i = psi[1:-1]
@@ -145,7 +147,7 @@ def solve_bound_states(
         residuals[n] = np.linalg.norm(h_psi - energy * psi_i) / max(
             np.linalg.norm(energy * psi_i), 1.0
         )
-
+  
     return BoundStateSolution(
         x=x,
         potential=v_full,
@@ -157,8 +159,9 @@ def solve_bound_states(
 
 
 def overlap_matrix(solution: BoundStateSolution) -> Array:
-    """Calcula S_mn = integral psi_m^*(x) psi_n(x) dx."""
+    # Calculo de S_mn = integral psi_m^*(x) psi_n(x) dx.
 
+   # En la diagonal debe haber 1s y fuera de ella 0s
     n_states = len(solution.energies)
     overlap = np.empty((n_states, n_states), dtype=float)
     for m in range(n_states):
@@ -171,7 +174,7 @@ def overlap_matrix(solution: BoundStateSolution) -> Array:
 
 
 def count_nodes(psi: Array, relative_tolerance: float = 1.0e-7) -> int:
-    """Cuenta cambios de signo interiores ignorando la cola numericamente nula."""
+    # Cambios de signo
 
     threshold = relative_tolerance * float(np.max(np.abs(psi)))
     significant = psi[np.abs(psi) > threshold]
@@ -193,26 +196,23 @@ def solve_left_incident_scattering(
     rtol: float = 2.0e-10,
     atol: float = 1.0e-12,
 ) -> ScatteringResult:
-    """Calcula R y T para un potencial localizado mediante emparejamiento.
+    ''' Calcula R y T utilizando la siguiente matrix M:
 
     En [x_left, x_right] se integra una matriz fundamental M tal que
 
         [psi(x_right), psi'(x_right)]^T
-            = M [psi(x_left), psi'(x_left)]^T.
-
-    En los exteriores se imponen una onda incidente y otra reflejada a la
-    izquierda, y solo una onda saliente a la derecha. Esta formulacion trata la
-    energia como dato continuo, como requiere un problema de dispersion.
-    """
+            = M [psi(x_left), psi'(x_left)]^T
+   '''
 
     if x_right <= x_left:
-        raise ValueError("Debe cumplirse x_right > x_left.")
+        raise ValueError("Debe cumplirse x_right > x_left")
     if mass <= 0.0 or hbar <= 0.0:
-        raise ValueError("mass y hbar deben ser positivos.")
+        raise ValueError("La masa y la constante de Planck tienen que ser positivas")
     if energy <= max(v_left, v_right):
-        raise ValueError("Se requieren canales propagantes en ambos extremos.")
+        raise ValueError("Necesarios canales propagantes en ambos extremos")
 
     def first_order_system(x: float, flattened: NDArray[np.complex128]):
+       # aplanamiento de la maatriz para solve_ivp
         fundamental = flattened.reshape(2, 2)
         v_x = float(np.asarray(potential(x)))
         alpha = 2.0 * mass * (v_x - energy) / hbar**2
@@ -221,6 +221,7 @@ def solve_left_incident_scattering(
         derivative[1] = alpha * fundamental[0]
         return derivative.ravel()
 
+   # Utilizacion del metodo DOP853
     initial_fundamental = np.eye(2, dtype=complex).ravel()
     integration = solve_ivp(
         first_order_system,
@@ -238,6 +239,7 @@ def solve_left_incident_scattering(
     k_left = np.sqrt(2.0 * mass * (energy - v_left)) / hbar
     k_right = np.sqrt(2.0 * mass * (energy - v_right)) / hbar
 
+   # Vecotres de las ondas planas asintóticas
     incident = np.array([1.0, 1j * k_left], dtype=complex)
     reflected = np.array([1.0, -1j * k_left], dtype=complex)
     transmitted = np.array([1.0, 1j * k_right], dtype=complex)
@@ -289,6 +291,7 @@ def harmonic_wavefunction(
     mass: float = 1.0,
     hbar: float = 1.0,
 ) -> Array:
+   # Longitud del oscilador y coordenada xi
     oscillator_length = np.sqrt(hbar / (mass * omega))
     xi = x / oscillator_length
     prefactor = 1.0 / np.sqrt(
@@ -305,11 +308,11 @@ def rectangular_barrier_transmission_exact(
     mass: float = 1.0,
     hbar: float = 1.0,
 ) -> Array:
-    """Coeficiente exacto T(E) de una barrera rectangular aislada."""
+    # Coeficiente  T(E) de una barrera rectangular aislada
 
     energies = np.asarray(energy, dtype=float)
     if np.any(energies <= 0.0) or height <= 0.0 or width <= 0.0:
-        raise ValueError("E, height y width deben ser positivos.")
+        raise ValueError("E, altura y anchura deben ser valores positivos")
 
     transmission = np.empty_like(energies)
     below = energies < height
@@ -338,7 +341,7 @@ def rectangular_barrier_transmission_exact(
 
 
 def phase_aligned_l2_error(numerical: Array, exact: Array, x: Array) -> float:
-    """Error L2 minimo teniendo en cuenta el signo global arbitrario."""
+    # Error minimo teniendo en cuenta el signo arbitrario.
 
     overlap = simpson(numerical * exact, x=x)
     aligned = numerical if overlap >= 0.0 else -numerical
@@ -366,6 +369,7 @@ def _save_bound_state_table(
                 "residuo_relativo",
             ]
         )
+       # el indice comienza en cero. En el pozo corresponde al nivel n+1
         for n, energy in enumerate(solution.energies):
             writer.writerow(
                 [
@@ -389,6 +393,7 @@ def _plot_bound_states(
     fig, axes = plt.subplots(1, 2, figsize=(12.0, 5.2), constrained_layout=True)
 
     ax = axes[0]
+   #desplazamiento para mejorar representacion
     for energy, psi in zip(well.energies, well.wavefunctions, strict=True):
         ax.axhline(energy, color="0.82", linewidth=0.8)
         ax.plot(well.x, energy + 0.7 * psi, linewidth=1.5)
@@ -535,8 +540,10 @@ def _barrier_study(output_dir: Path) -> tuple[float, float]:
 
 
 def run_study(output_dir: Path) -> None:
+   # Ejecucion de los tres casos y generacion de resultados
     output_dir.mkdir(parents=True, exist_ok=True)
 
+   # Estados ligados
     n_states = 4
     well = solve_bound_states(
         lambda x: np.zeros_like(x), 0.0, 1.0, 1201, n_states
@@ -578,6 +585,7 @@ def run_study(output_dir: Path) -> None:
     )
     _plot_bound_states(well, oscillator, output_dir / "estados_ligados.png")
 
+   # Estudios de convergencia y dispersion
     convergence_order, finest_error = _well_convergence(
         output_dir / "convergencia_pozo.png"
     )
@@ -598,6 +606,7 @@ def run_study(output_dir: Path) -> None:
         np.max(np.abs(overlap_matrix(oscillator) - np.eye(n_states)))
     )
 
+   # Resumen de las magntiudes utilizadas
     checks = {
         "max_error_relativo_energia_pozo": well_energy_error,
         "max_error_relativo_energia_oscilador": oscillator_energy_error,
@@ -616,7 +625,7 @@ def run_study(output_dir: Path) -> None:
         writer.writerow(["magnitud", "valor"])
         writer.writerows(checks.items())
 
-    # Criterios holgados respecto al error observado: detectan regresiones reales.
+    # Criterios respecto al error observado
     assert well_energy_error < 2.0e-4
     assert oscillator_energy_error < 2.0e-4
     assert well_orthogonality_error < 1.0e-9
@@ -625,21 +634,22 @@ def run_study(output_dir: Path) -> None:
     assert barrier_error < 2.0e-8
     assert conservation_error < 2.0e-8
 
-    print("Validacion completada correctamente.")
+    print("Validacion finalizada correctamente.")
     print(f"Resultados guardados en: {output_dir.resolve()}")
     for name, value in checks.items():
         print(f"  {name}: {value:.6e}")
 
 
 def main() -> None:
+   # UI para directorio de salida
     parser = argparse.ArgumentParser(
-        description="Estudio numerico de la ecuacion de Schrodinger 1D"
+        description="Estudio numérico de la ecuacion de Schrodinger en una dimensión"
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
         default=Path("resultados_schrodinger"),
-        help="Directorio para tablas y figuras",
+        help="Directorio de tablas e imágenes",
     )
     args = parser.parse_args()
     run_study(args.output_dir)
