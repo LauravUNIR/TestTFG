@@ -22,7 +22,6 @@ COLORS = [
 
 st.set_page_config(
     page_title="Oscilador armónico",
-    page_icon="〰️",
     layout="wide",
 )
 
