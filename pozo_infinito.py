@@ -12,7 +12,6 @@ from schrodinger1d import (
 
 st.set_page_config(
     page_title="Ecuación de Schrödinger 1D",
-    page_icon="⚛️",
     layout="wide",
 )
 
@@ -21,12 +20,12 @@ st.title("Resolución numérica de la ecuación de Schrödinger 1D")
 st.write(
     """
     Aplicación interactiva para estudiar los autoestados de una partícula
-    en un pozo de potencial infinito mediante diferencias finitas.
+    en un pozo de potencial infinito
     """
 )
 
 st.info(
-    "Se utilizan unidades adimensionales con ℏ = m = 1."
+    # Se utilizan unidades adimensionales con ℏ = m = 1
 )
 
 with st.sidebar:
@@ -75,7 +74,7 @@ if not calculate:
         r"\qquad \psi(0)=\psi(L)=0"
     )
 
-    st.warning("Selecciona los parámetros y pulsa «Calcular».")
+    st.warning("Selecciona los parámetros y pulsa Calcular")
     st.stop()
 
 
@@ -144,7 +143,7 @@ for index, n in enumerate(quantum_numbers):
         length,
     )
 
-    # Las autofunciones pueden diferir en un signo global.
+    # Ignorar signot funcion
     if np.dot(numerical, exact) < 0.0:
         exact = -exact
 
@@ -196,7 +195,7 @@ column1.metric(
 )
 
 column2.metric(
-    "Error máximo de energía",
+    "Error máximo para la energía",
     f"{np.max(relative_errors):.3e}",
 )
 
