@@ -11,7 +11,6 @@ from schrodinger1d import (
 
 st.set_page_config(
     page_title="Barrera rectangular",
-    page_icon="🚧",
     layout="wide",
 )
 
@@ -20,7 +19,6 @@ st.write(
     "Estudio de la dispersión de una partícula incidente desde la izquierda "
     "sobre una barrera rectangular localizada entre x=0 y x=a."
 )
-st.info("Se utilizan unidades adimensionales con ℏ = m = 1 y V=0 en los exteriores.")
 
 
 @st.cache_data(show_spinner=False, max_entries=20)
@@ -98,7 +96,7 @@ if not calculate:
     st.latex(
         r"V(x)=\begin{cases}V_0,&0\leq x\leq a,\\0,&\text{en los exteriores.}\end{cases}"
     )
-    st.warning("Selecciona los parámetros y pulsa «Calcular».")
+    st.warning("Selecciona los parámetros y pulsa Calcular")
     st.stop()
 
 energy = energy_ratio * height
@@ -135,11 +133,11 @@ with st.spinner("Calculando los coeficientes de dispersión..."):
     )
 
 if energy < height:
-    st.success("Régimen de efecto túnel: E < V₀.")
+    st.success("Energía es menor que el potencial: E < V₀.")
 elif energy > height:
-    st.info("Régimen por encima de la barrera: E > V₀.")
+    st.info("Energía es mayor que el potencial: E > V₀.")
 else:
-    st.info("La energía coincide con la altura de la barrera: E = V₀.")
+    st.info("La energía es igual a la altura de la barrera: E = V₀.")
 
 st.subheader("Coeficientes de reflexión y transmisión")
 results_table = pd.DataFrame(
